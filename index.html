@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NP Wellness - Adult Wellness Products India</title>
+    <meta name="description" content="NP Wellness - Premium adult wellness products with 100% discreet delivery across India. High-quality toys, lubricants, and accessories." />
+    <meta name="author" content="NP Wellness" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/favicon.ico" />
+
+    <meta property="og:title" content="NP Wellness - Adult Wellness Products India" />
+    <meta property="og:description" content="NP Wellness - Premium adult wellness products with 100% discreet delivery across India. High-quality toys, lubricants, and accessories." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/logo.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@NPwellnessstore" />
+    <meta name="twitter:image" content="/logo.png" />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Prevent share-modal scripts from throwing errors when elements are missing
+      window.addEventListener('DOMContentLoaded', () => {
+        const ensurePlaceholder = (id) => {
+          if (!document.getElementById(id)) {
+            const el = document.createElement('div');
+            el.id = id;
+            el.style.display = 'none';
+            document.body.appendChild(el);
+          }
+        };
+
+        ensurePlaceholder('share-modal');
+        ensurePlaceholder('share-modal-trigger');
+        ensurePlaceholder('share-modal-close');
+
+        // Handle share-modal.js errors by preventing null addEventListener
+        const shareModalScript = document.querySelector('script[src*="share-modal.js"]');
+        if (shareModalScript) {
+          shareModalScript.onerror = function() {
+            console.warn('share-modal.js failed to load, continuing without share functionality');
+          };
+        }
+      });
+    </script>
+  </body>
+</html>
