@@ -600,8 +600,8 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
                 </div>
               )}
 
-              <div className="bg-white border rounded p-3">
-                <p className="font-mono text-sm break-all text-center">
+              <div className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-3">
+                <p className="font-mono text-sm break-all text-center text-gray-900 dark:text-gray-100">
                   {payment.upiString}
                 </p>
               </div>

@@ -38,10 +38,10 @@ export class OrderService {
     try {
       const { product, quantity, shippingAddress, userId, saveAddress, isDefaultAddress } = orderRequest;
 
-      // Calculate order totals
+      // Calculate order totals (NO SHIPPING CHARGES - Customer pays exact product price)
       const subtotal = product.price * quantity;
-      const shippingCost = 50; // Fixed shipping cost
-      const totalAmount = subtotal + shippingCost;
+      const shippingCost = 0; // FREE SHIPPING - Customer pays exact product price
+      const totalAmount = subtotal; // No shipping charges
 
       // Generate unique order number
       const orderNumber = await this.generateOrderNumber();
@@ -158,11 +158,11 @@ export class OrderService {
         };
       }
 
-      // Calculate total amount for payment
+      // Calculate total amount for payment (NO SHIPPING CHARGES - Customer pays exact product price)
       const { product, quantity } = orderRequest;
       const subtotal = product.price * quantity;
-      const shippingCost = 50; // Fixed shipping cost
-      const totalAmount = subtotal + shippingCost;
+      const shippingCost = 0; // FREE SHIPPING - Customer pays exact product price
+      const totalAmount = subtotal; // No shipping charges
 
       // Create payment transaction
       const paymentResponse = await PaymentGatewayService.createPayment({

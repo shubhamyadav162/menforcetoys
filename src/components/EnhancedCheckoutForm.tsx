@@ -184,10 +184,10 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ product, us
     };
   }, [language]);
 
-  // Calculate totals
+  // Calculate totals (NO SHIPPING CHARGES - Customer pays exact product price)
   const subtotal = product.price * quantity;
-  const shippingCost = 50;
-  const total = subtotal + shippingCost;
+  const shippingCost = 0; // FREE SHIPPING - Customer pays exact product price
+  const total = subtotal; // Customer only pays product price, no extra charges
 
   // Real-time field validation
   const validateFieldRealTime = useCallback((name: string, value: string) => {
@@ -616,9 +616,9 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ product, us
                       <span>{t.subtotal}:</span>
                       <span>₹{subtotal}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between text-green-600">
                       <span>{t.shipping}:</span>
-                      <span>₹{shippingCost}</span>
+                      <span>FREE</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between font-bold text-lg">
