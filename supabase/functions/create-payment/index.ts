@@ -99,7 +99,7 @@ serve(async (req) => {
     const merchantId = Deno.env.get('TOYS4PEACE_MERCHANT_ID')
     const secretKey = Deno.env.get('TOYS4PEACE_SECRET_KEY')
 
-    // Enable real Toys4Peace payment gateway
+    // Enable real Toys4Peace payment gateway - merchant account is now activated!
     const useGateway = Boolean(merchantConfig && merchantId && secretKey && PAYMENT_API_URL)
 
     // Create gateway order ID
