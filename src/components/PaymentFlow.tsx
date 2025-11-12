@@ -28,6 +28,16 @@ interface PaymentFlowProps {
     image?: string;
     quantity?: number;
   };
+  existingPaymentData?: {
+    paymentId: string;
+    transactionId: string;
+    gatewayOrderId: string;
+    upiString: string;
+    amount: number;
+    currency: string;
+    expiresAt: string;
+    status: string;
+  };
   onPaymentComplete?: (status: 'completed' | 'failed' | 'cancelled') => void;
   onClose?: () => void;
 }
@@ -55,6 +65,7 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
   orderId,
   amount,
   productInfo,
+  existingPaymentData,
   onPaymentComplete,
   onClose
 }) => {
@@ -169,17 +180,14 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
       setCreating(true);
       setError(null);
 
-      const response = await PaymentGatewayService.createPayment({
-        orderId,
-        amount
-      });
+      // Use existing payment data if provided, otherwise create new payment
+      if (existingPaymentData) {
+        console.log('Using existing payment data:', existingPaymentData);
+        setPayment(existingPaymentData);
 
-      if (response.success && response.data) {
-        setPayment(response.data);
-
-        // Start status polling
+        // Start status polling for existing payment
         pollerRef.current = new PaymentStatusPoller(
-          response.data.paymentId,
+          existingPaymentData.paymentId,
           handlePaymentStatusUpdate
         );
         pollerRef.current.start();
@@ -193,7 +201,7 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
               success: true,
               data: {
                 ...payload,
-                paymentId: response.data.paymentId,
+                paymentId: existingPaymentData.paymentId,
                 orderId,
                 amount,
                 currency: 'INR'
@@ -202,7 +210,42 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
           }
         );
       } else {
-        setError(response.error || 'Failed to create payment');
+        // Create new payment (fallback)
+        const response = await PaymentGatewayService.createPayment({
+          orderId,
+          amount
+        });
+
+        if (response.success && response.data) {
+          setPayment(response.data);
+
+          // Start status polling
+          pollerRef.current = new PaymentStatusPoller(
+            response.data.paymentId,
+            handlePaymentStatusUpdate
+          );
+          pollerRef.current.start();
+
+          // Subscribe to real-time updates
+          subscriptionRef.current = PaymentGatewayService.subscribeToPaymentUpdates(
+            orderId,
+            (payload) => {
+              console.log('Real-time payment update:', payload);
+              handlePaymentStatusUpdate({
+                success: true,
+                data: {
+                  ...payload,
+                  paymentId: response.data.paymentId,
+                  orderId,
+                  amount,
+                  currency: 'INR'
+                }
+              });
+            }
+          );
+        } else {
+          setError(response.error || 'Failed to create payment');
+        }
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Payment initialization failed');

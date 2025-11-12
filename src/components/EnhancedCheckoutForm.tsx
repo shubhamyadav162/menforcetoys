@@ -149,6 +149,16 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ product, us
       image?: string;
       quantity: number;
     };
+    paymentData?: {
+      paymentId: string;
+      transactionId: string;
+      gatewayOrderId: string;
+      upiString: string;
+      amount: number;
+      currency: string;
+      expiresAt: string;
+      status: string;
+    };
   } | null>(null);
 
   // Initialize monitoring
@@ -313,7 +323,8 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ product, us
               name: product.name,
               image: product.image,
               quantity
-            }
+            },
+            paymentData: result.paymentData
           };
 
           console.log('Setting orderForPayment:', paymentData);
@@ -508,6 +519,7 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ product, us
             orderId={orderForPayment.orderId}
             amount={orderForPayment.amount}
             productInfo={orderForPayment.productInfo}
+            existingPaymentData={orderForPayment.paymentData}
             onPaymentComplete={handlePaymentComplete}
             onClose={handlePaymentClose}
           />

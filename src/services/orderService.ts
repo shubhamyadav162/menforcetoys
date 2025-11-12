@@ -184,7 +184,8 @@ export class OrderService {
           requiresPayment: true,
           paymentId: paymentResponse.data.paymentId,
           upiString: paymentResponse.data.upiString,
-          amount: totalAmount
+          amount: totalAmount,
+          paymentData: paymentResponse.data
         };
       } else {
         // Payment creation failed, but order was created
