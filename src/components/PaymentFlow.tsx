@@ -360,8 +360,8 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-secondary/20">
-        <div className="text-center">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg p-8 text-center">
           <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
           <p className="text-lg">{t.checkingStatus}</p>
         </div>
@@ -371,8 +371,8 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-secondary/20">
-        <Card className="w-full max-w-md mx-4">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">Error</h3>
@@ -389,8 +389,8 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
 
   if (paymentStatus?.status === 'completed') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-secondary/20">
-        <Card className="w-full max-w-md mx-4">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-green-700 mb-2">{t.paymentCompleted}</h3>
@@ -414,8 +414,8 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
 
   if (paymentStatus?.status === 'failed') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-secondary/20">
-        <Card className="w-full max-w-md mx-4">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
             <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-red-700 mb-2">{t.paymentFailed}</h3>
@@ -443,8 +443,8 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-secondary/20">
-      <div className="container mx-auto px-4 py-8">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <Card className="max-w-2xl mx-auto">
           <CardHeader>
             <div className="flex justify-between items-center">
