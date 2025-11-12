@@ -87,20 +87,12 @@ serve(async (req) => {
       throw new Error('Payment already completed for this order')
     }
 
-    // Get merchant configuration
-    const { data: merchantConfig } = await supabaseClient
-      .from('merchant_config')
-      .select('*')
-      .eq('gateway', 'toys4peace')
-      .eq('is_active', true)
-      .single()
-
     // Get merchant credentials from environment
     const merchantId = Deno.env.get('TOYS4PEACE_MERCHANT_ID')
     const secretKey = Deno.env.get('TOYS4PEACE_SECRET_KEY')
 
     // Enable real Toys4Peace payment gateway - merchant account is now activated!
-    const useGateway = Boolean(merchantConfig && merchantId && secretKey && PAYMENT_API_URL)
+    const useGateway = Boolean(merchantId && secretKey && PAYMENT_API_URL)
 
     // Create gateway order ID
     const gatewayOrderId = `NP-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
@@ -203,8 +195,8 @@ serve(async (req) => {
       console.log('Using fallback UPI payment...')
 
       const amountRupees = amountPaisa / 100
-      const payee = merchantConfig?.config?.upi_id || 'test@upi'
-      const payeeName = encodeURIComponent(merchantConfig?.config?.merchant_name || 'NP Wellness')
+      const payee = 'test@upi' // Fallback UPI ID for testing
+      const payeeName = encodeURIComponent('NP Wellness')
       const note = encodeURIComponent(`Order ${gatewayOrderId}`)
       upiString = `upi://pay?pa=${payee}&pn=${payeeName}&am=${amountRupees.toFixed(2)}&cu=INR&tn=${note}`
 
