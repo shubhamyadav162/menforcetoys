@@ -2,6 +2,22 @@ import { Product } from "@/types/product";
 
 export const products: Product[] = [
   {
+    id: "test-product",
+    name: {
+      en: "Test Product - Payment Gateway Test",
+      hi: "टेस्ट प्रोडक्ट - पेमेंट गेटवे टेस्ट"
+    },
+    description: {
+      en: "🧪 Test Product - Perfect for testing payment gateway • 100% discreet",
+      hi: "🧪 टेस्ट प्रोडक्ट - पेमेंट गेटवे टेस्ट के लिए उपयुक्त • 100% गोपनीय"
+    },
+    price: 1,
+    image: "/products/test-product.webp",
+    category: "test",
+    specs: ["Payment Testing", "No GST", "Final Price", "Quick Delivery"],
+    isTest: true
+  },
+  {
     id: "stretchable-toy",
     name: {
       en: "Premium Stretchable Pocket Pussy",
@@ -14,13 +30,13 @@ export const products: Product[] = [
     price: 499,
     image: "/products/stretchable-pocket-pussy.webp",
     category: "toys",
-    specs: ["Stretchable Material", "Easy to Clean", "Portable", "Discreet"]
+    specs: ["Stretchable Material", "Easy to Clean", "Portable", "Discreet", "No Hidden GST"]
   },
   {
     id: "realistic-toy",
     name: {
       en: "Ultra-Realistic Premium Pussy",
-      hi: "अल्ट्रा-रियलिस्टिक प्रीमियम पुसी"
+      hi: "अल्ट्रा-�ियलिस्टिक प्रीमियम पुसी"
     },
     description: {
       en: "🍑 Realistic Pussy - Real feeling • Soft and skin-friendly",
@@ -29,7 +45,7 @@ export const products: Product[] = [
     price: 999,
     image: "/products/realistic-pocket-pussy.jpg",
     category: "toys",
-    specs: ["Realistic Texture", "Skin-Friendly", "Soft Material", "Premium Quality"]
+    specs: ["Realistic Texture", "Skin-Friendly", "Soft Material", "Premium Quality", "No Hidden GST"]
   },
   {
     id: "black-case-toy",
@@ -44,7 +60,7 @@ export const products: Product[] = [
     price: 1499,
     image: "/products/vibrating-pocket-pussy.jpg",
     category: "toys",
-    specs: ["Vibrating Function", "Discreet Case", "Realistic Texture", "Multiple Modes"]
+    specs: ["Vibrating Function", "Discreet Case", "Realistic Texture", "Multiple Modes", "No Hidden GST"]
   },
   {
     id: "lubricant",
@@ -59,6 +75,6 @@ export const products: Product[] = [
     price: 199,
     image: "/products/strawberry-lubricant.webp",
     category: "accessories",
-    specs: ["Strawberry Flavor", "Smooth", "Long-Lasting", "Body-Safe"]
+    specs: ["Strawberry Flavor", "Smooth", "Long-Lasting", "Body-Safe", "No Hidden GST"]
   }
 ];

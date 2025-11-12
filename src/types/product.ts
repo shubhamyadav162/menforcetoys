@@ -22,6 +22,7 @@ export interface Product {
   is_active?: boolean;
   is_featured?: boolean;
   is_discreet?: boolean;
+  isTest?: boolean;
   weight?: number;
   compare_price?: number;
   rating?: number;
