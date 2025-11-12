@@ -18,13 +18,7 @@ import type {
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  global: {
-    headers: {
-      Accept: 'application/json',
-    },
-  },
-})
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Legacy Order interface (maintained for backward compatibility)
 export interface LegacyOrder {
