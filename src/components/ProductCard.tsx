@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
+import PaymentDebugger from "@/utils/paymentDebugger";
 
 interface ProductCardProps {
   product: Product;
@@ -48,7 +49,10 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           <span className="text-xl font-bold text-primary">₹{product.price}</span>
           <Button
             size="sm"
-            onClick={() => navigate('/checkout', { state: { product } })}
+            onClick={() => {
+              PaymentDebugger.logNavigationFlow('ProductCard', '/checkout', { product });
+              navigate('/checkout', { state: { product } });
+            }}
             className="bg-red-600 hover:bg-red-700 text-white"
           >
             <ArrowRight className="w-4 h-4 mr-1" />

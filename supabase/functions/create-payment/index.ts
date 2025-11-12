@@ -1,6 +1,5 @@
-import { serve } from "https://deno.land/std@0.131.0/http/server.ts"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { createHash } from "https://deno.land/std@0.131.0/crypto/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -255,9 +254,11 @@ serve(async (req) => {
 
 // Helper function to validate webhook signature (if needed)
 async function validateWebhookSignature(payload: string, signature: string, secret: string): Promise<boolean> {
-  const expectedSignature = await createHash('SHA-256')
-    .update(payload + secret)
-    .digest('hex')
+  const encoder = new TextEncoder()
+  const data = encoder.encode(payload + secret)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 
-  return signature === expectedSignature
+  return signature === hashHex
 }

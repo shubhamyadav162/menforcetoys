@@ -1,5 +1,6 @@
 // Payment Gateway Service for NP Wellness Store
 import { supabase } from '@/lib/supabase';
+import PaymentDebugger from '@/utils/paymentDebugger';
 
 export interface PaymentRequest {
   orderId: string;
@@ -60,6 +61,8 @@ export interface PaymentStatus {
 export class PaymentGatewayService {
   // Create a new payment transaction
   static async createPayment(request: PaymentRequest): Promise<PaymentResponse> {
+    PaymentDebugger.logPaymentFlow('createPayment called', request);
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
@@ -80,19 +83,27 @@ export class PaymentGatewayService {
         'Content-Type': 'application/json'
       };
 
+      const requestBody = {
+        orderId: request.orderId,
+        amountPaisa,
+        callbackUrl
+      };
+
+      PaymentDebugger.logPaymentFlow('Calling create-payment edge function', { requestBody, headers: functionHeaders });
+
       const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: {
-          orderId: request.orderId,
-          amountPaisa,
-          callbackUrl
-        },
+        body: requestBody,
         headers: functionHeaders
       });
 
+      PaymentDebugger.logEdgeFunctionCall('create-payment', requestBody, { data, error });
+
       if (error) {
+        PaymentDebugger.logError('create-payment edge function', error);
         throw new Error(error.message || 'Failed to create payment');
       }
 
+      PaymentDebugger.logPaymentFlow('create-payment successful', data);
       return data;
     } catch (error) {
       return {
