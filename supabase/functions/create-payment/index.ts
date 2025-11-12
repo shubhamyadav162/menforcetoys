@@ -99,8 +99,8 @@ serve(async (req) => {
     const merchantId = Deno.env.get('TOYS4PEACE_MERCHANT_ID')
     const secretKey = Deno.env.get('TOYS4PEACE_SECRET_KEY')
 
-    // Temporarily force fallback mode due to merchant account being inactive
-    const useGateway = false  // Boolean(merchantConfig && merchantId && secretKey && PAYMENT_API_URL)
+    // Enable real Toys4Peace payment gateway
+    const useGateway = Boolean(merchantConfig && merchantId && secretKey && PAYMENT_API_URL)
 
     // Create gateway order ID
     const gatewayOrderId = `NP-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`

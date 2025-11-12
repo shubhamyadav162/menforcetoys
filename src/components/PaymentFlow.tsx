@@ -16,9 +16,11 @@ import {
   ExternalLink,
   XCircle,
   RefreshCw,
-  Smartphone
+  Smartphone,
+  QrCode
 } from 'lucide-react';
 import PaymentGatewayService, { PaymentStatusPoller } from '@/services/paymentGatewayService';
+import QRCode from 'qrcode';
 
 interface PaymentFlowProps {
   orderId: string;
@@ -153,6 +155,7 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
 
   const pollerRef = useRef<PaymentStatusPoller | null>(null);
   const subscriptionRef = useRef<any>(null);
@@ -175,6 +178,23 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
     }
   };
 
+  const generateQRCode = async (upiString: string): Promise<string | null> => {
+    try {
+      const qrDataUrl = await QRCode.toDataURL(upiString, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      return qrDataUrl;
+    } catch (error) {
+      console.error('Failed to generate QR code:', error);
+      return null;
+    }
+  };
+
   const initializePayment = async () => {
     try {
       setCreating(true);
@@ -184,6 +204,12 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
       if (existingPaymentData) {
         console.log('Using existing payment data:', existingPaymentData);
         setPayment(existingPaymentData);
+
+        // Generate QR code for UPI payment
+        if (existingPaymentData.upiString) {
+          const qrUrl = await generateQRCode(existingPaymentData.upiString);
+          setQrCodeUrl(qrUrl);
+        }
 
         // Start status polling for existing payment
         pollerRef.current = new PaymentStatusPoller(
@@ -218,6 +244,12 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
 
         if (response.success && response.data) {
           setPayment(response.data);
+
+          // Generate QR code for UPI payment
+          if (response.data.upiString) {
+            const qrUrl = await generateQRCode(response.data.upiString);
+            setQrCodeUrl(qrUrl);
+          }
 
           // Start status polling
           pollerRef.current = new PaymentStatusPoller(
@@ -299,7 +331,17 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
     if (!payment?.upiString) return;
 
     const upiUrl = PaymentGatewayService.generateUpiPaymentUrl(payment.upiString);
-    window.open(upiUrl, '_blank');
+
+    // Check if it's mobile device
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      // On mobile, try to open UPI app directly
+      window.location.href = upiUrl;
+    } else {
+      // On desktop, open in new window/tab as fallback
+      window.open(upiUrl, '_blank');
+    }
   };
 
   const handleCancelPayment = async () => {
@@ -541,6 +583,22 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
                 <Smartphone className="w-5 h-5" />
                 <h4 className="font-semibold">{t.upiPayment}</h4>
               </div>
+
+              {/* QR Code Display */}
+              {qrCodeUrl && (
+                <div className="flex flex-col items-center space-y-2">
+                  <div className="bg-white p-4 rounded-lg border">
+                    <img
+                      src={qrCodeUrl}
+                      alt="UPI Payment QR Code"
+                      className="w-48 h-48"
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground text-center">
+                    Scan this QR code with any UPI app
+                  </p>
+                </div>
+              )}
 
               <div className="bg-white border rounded p-3">
                 <p className="font-mono text-sm break-all text-center">
