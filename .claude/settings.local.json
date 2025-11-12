@@ -31,7 +31,8 @@
       "Bash(mcp call supabase:*)",
       "Bash(npx @supabase/supabase-js functions list:*)",
       "Bash(npx supabase functions deploy:*)",
-      "Bash(npx supabase secrets set:*)"
+      "Bash(npx supabase secrets set:*)",
+      "Bash(npx supabase functions logs create-payment:*)"
     ],
     "deny": [],
     "ask": []

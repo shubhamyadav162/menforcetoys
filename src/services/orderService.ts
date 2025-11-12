@@ -170,7 +170,13 @@ export class OrderService {
         amount: totalAmount
       });
 
+      console.log('Payment response received:', paymentResponse);
+
       if (paymentResponse.success && paymentResponse.data) {
+        console.log('Payment successful, setting up payment flow');
+        console.log('Payment ID:', paymentResponse.data.paymentId);
+        console.log('UPI String:', paymentResponse.data.upiString);
+
         return {
           success: true,
           data: orderResponse.data,

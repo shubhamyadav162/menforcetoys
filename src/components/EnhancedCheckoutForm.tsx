@@ -299,7 +299,14 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ product, us
 
         if (result.requiresPayment && result.paymentId) {
           // Show payment flow
-          setOrderForPayment({
+          console.log('Setting up payment flow with:', {
+            orderId: result.data.id,
+            amount: result.amount || total,
+            paymentId: result.paymentId,
+            requiresPayment: result.requiresPayment
+          });
+
+          const paymentData = {
             orderId: result.data.id,
             amount: result.amount || total,
             productInfo: {
@@ -307,7 +314,12 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ product, us
               image: product.image,
               quantity
             }
-          });
+          };
+
+          console.log('Setting orderForPayment:', paymentData);
+          setOrderForPayment(paymentData);
+
+          console.log('Setting showPaymentFlow to true');
           setShowPaymentFlow(true);
 
           FeedbackManager.success(
@@ -490,15 +502,17 @@ const EnhancedCheckoutForm: React.FC<EnhancedCheckoutFormProps> = ({ product, us
   return (
     <>
       {/* Payment Flow Modal */}
-      {showPaymentFlow && orderForPayment && (
-        <PaymentFlow
-          orderId={orderForPayment.orderId}
-          amount={orderForPayment.amount}
-          productInfo={orderForPayment.productInfo}
-          onPaymentComplete={handlePaymentComplete}
-          onClose={handlePaymentClose}
-        />
-      )}
+      <>
+        {showPaymentFlow && orderForPayment && (
+          <PaymentFlow
+            orderId={orderForPayment.orderId}
+            amount={orderForPayment.amount}
+            productInfo={orderForPayment.productInfo}
+            onPaymentComplete={handlePaymentComplete}
+            onClose={handlePaymentClose}
+          />
+        )}
+      </>
 
       {/* Regular Checkout Form */}
       <div className="min-h-screen flex flex-col">

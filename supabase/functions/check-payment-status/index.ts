@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.131.0/http/server.ts"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -8,6 +8,9 @@ const corsHeaders = {
   'Access-Control-Allow-Credentials': 'true',
   'Vary': 'Accept, Origin'
 }
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
 serve(async (req) => {
   // Handle CORS
@@ -22,45 +25,33 @@ serve(async (req) => {
     })
   }
 
+  console.log('=== REAL PAYMENT STATUS FUNCTION ===')
+
   try {
-    // Check Accept header
-    const acceptHeader = req.headers.get('Accept') || '';
-    if (!acceptHeader.includes('application/json') && !acceptHeader.includes('*/*')) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Not Acceptable - Only JSON responses are supported'
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 406
-        }
-      )
-    }
-
-    const authHeader = req.headers.get('Authorization') ?? undefined
-    const clientOptions = authHeader
-      ? {
-        global: {
-          headers: { Authorization: authHeader }
-        }
-      }
-      : undefined
-
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      clientOptions
-    )
-
     // Get payment ID from URL
     const url = new URL(req.url)
     const paymentId = url.searchParams.get('paymentId')
     const orderId = url.searchParams.get('orderId')
 
+    console.log('Extracted paymentId:', paymentId)
+    console.log('Extracted orderId:', orderId)
+
     if (!paymentId && !orderId) {
       throw new Error('Either paymentId or orderId is required')
     }
+
+    // Initialize Supabase client
+    const supabaseClient = createClient(
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+          }
+        }
+      }
+    )
 
     let query = supabaseClient
       .from('payment_transactions')
@@ -85,14 +76,11 @@ serve(async (req) => {
     const { data: payment, error: paymentError } = await query.single()
 
     if (paymentError || !payment) {
+      console.error('Payment not found:', paymentError)
       throw new Error('Payment transaction not found')
     }
 
-    // Check if the user has access to this payment
-    const { data: { user } } = await supabaseClient.auth.getUser()
-    if (!user || payment.orders.user_id !== user.id) {
-      throw new Error('Access denied')
-    }
+    console.log('✅ Payment transaction found:', payment)
 
     // Check if payment has expired
     const isExpired = payment.expires_at && new Date(payment.expires_at) < new Date()
@@ -177,7 +165,6 @@ serve(async (req) => {
       }
     } catch (gatewayError) {
       console.error('Gateway status check failed:', gatewayError)
-      // Don't fail the request if gateway check fails
     }
 
     // Calculate time remaining
@@ -187,40 +174,44 @@ serve(async (req) => {
       timeRemaining = Math.max(0, Math.floor(remaining / 1000)) // seconds
     }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: {
-          paymentId: payment.id,
-          orderId: payment.order_id,
-          gatewayOrderId: payment.gateway_order_id,
-          gatewayTransactionId: payment.gateway_transaction_id,
-          amount: payment.amount,
-          currency: payment.currency,
-          status: payment.status,
-          gatewayStatus: payment.gateway_status,
-          upiString: payment.upi_string,
-          vpaId: payment.vpa_id,
-          bankRef: payment.bank_ref,
-          createdAt: payment.created_at,
-          expiresAt: payment.expires_at,
-          completedAt: payment.completed_at,
-          timeRemaining,
-          isExpired,
-          gatewayInfo: gatewayStatus ? {
-            status: gatewayStatus.status,
-            vpa_id: gatewayStatus.vpa_id,
-            ref_id: gatewayStatus.ref_id,
-            createdAt: gatewayStatus.createdAt
-          } : null,
-          order: {
-            id: payment.orders.id,
-            status: payment.orders.status,
-            paymentStatus: payment.orders.payment_status,
-            totalAmount: payment.orders.total_amount
-          }
+    const response = {
+      success: true,
+      data: {
+        paymentId: payment.id,
+        orderId: payment.order_id,
+        gatewayOrderId: payment.gateway_order_id,
+        gatewayTransactionId: payment.gateway_transaction_id,
+        amount: payment.amount,
+        currency: payment.currency,
+        status: payment.status,
+        gatewayStatus: payment.gateway_status,
+        upiString: payment.upi_string,
+        vpaId: payment.vpa_id,
+        bankRef: payment.bank_ref,
+        createdAt: payment.created_at,
+        expiresAt: payment.expires_at,
+        completedAt: payment.completed_at,
+        timeRemaining,
+        isExpired,
+        gatewayInfo: gatewayStatus ? {
+          status: gatewayStatus.status,
+          vpa_id: gatewayStatus.vpa_id,
+          ref_id: gatewayStatus.ref_id,
+          createdAt: gatewayStatus.createdAt
+        } : null,
+        order: {
+          id: payment.orders.id,
+          status: payment.orders.status,
+          paymentStatus: payment.orders.payment_status,
+          totalAmount: payment.orders.total_amount
         }
-      }),
+      }
+    }
+
+    console.log('✅ Payment status retrieved successfully:', response)
+
+    return new Response(
+      JSON.stringify(response),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200
@@ -228,7 +219,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Payment status check error:', error)
+    console.error('❌ Payment status check error:', error)
 
     return new Response(
       JSON.stringify({

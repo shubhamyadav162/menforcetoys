@@ -9,12 +9,13 @@ const corsHeaders = {
   'Vary': 'Accept, Origin'
 }
 
-// Payment Gateway API Configuration
+// Payment Gateway Configuration
 const PAYMENT_API_URL = 'https://api.toys4peace.workers.dev/transaction'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+console.log('=== REAL PAYMENT GATEWAY FUNCTION ===');
 
 serve(async (req) => {
   // Handle CORS
@@ -22,60 +23,59 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  console.log('Request method:', req.method)
+  console.log('Request URL:', req.url)
+
   try {
-    // Check Accept header
-    const acceptHeader = req.headers.get('Accept') || '';
-    if (!acceptHeader.includes('application/json') && !acceptHeader.includes('*/*')) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Not Acceptable - Only JSON responses are supported'
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 406
-        }
-      )
+    // Parse request body
+    const text = await req.text()
+    console.log('Raw request body:', text)
+
+    if (!text) {
+      throw new Error('Empty request body')
     }
 
-    const authHeader = req.headers.get('Authorization') ?? undefined
-    const clientOptions = authHeader && !SUPABASE_SERVICE_ROLE_KEY
-      ? {
-        global: {
-          headers: { Authorization: authHeader }
-        }
-      }
-      : undefined
+    const requestBody = JSON.parse(text)
+    console.log('Parsed request body:', requestBody)
 
+    const { orderId, amountPaisa } = requestBody
+
+    if (!orderId || !amountPaisa) {
+      throw new Error(`Missing required fields: orderId=${!!orderId}, amountPaisa=${!!amountPaisa}`)
+    }
+
+    console.log('✅ Request validation successful')
+    console.log('Order ID:', orderId)
+    console.log('Amount (paisa):', amountPaisa)
+
+    // Initialize Supabase client with service role for elevated permissions
     const supabaseClient = createClient(
       SUPABASE_URL,
-      SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY,
-      clientOptions
+      SUPABASE_SERVICE_ROLE_KEY,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+          }
+        }
+      }
     )
 
-    // Parse request body
-    const { orderId, amountPaisa, callbackUrl } = await req.json()
-
-    if (!orderId || !amountPaisa || !callbackUrl) {
-      throw new Error('Missing required fields: orderId, amountPaisa, callbackUrl')
-    }
-
-    if (amountPaisa < 100) {
-      throw new Error('Amount must be at least 100 paisa (₹1.00)')
-    }
-
-    // Verify order exists and belongs to user
+    // Verify order exists
     const { data: order, error: orderError } = await supabaseClient
       .from('orders')
-      .select('id, user_id, total_amount, status, payment_status')
+      .select('id, total_amount, status, payment_status')
       .eq('id', orderId)
       .single()
 
     if (orderError || !order) {
+      console.error('Order not found:', orderError)
       throw new Error('Order not found')
     }
 
-    // Check if payment already exists for this order
+    console.log('✅ Order found:', order)
+
+    // Check if payment already exists
     const { data: existingPayment } = await supabaseClient
       .from('payment_transactions')
       .select('id, status')
@@ -95,7 +95,7 @@ serve(async (req) => {
       .eq('is_active', true)
       .single()
 
-    // Get merchant credentials from environment variables or secrets
+    // Get merchant credentials from environment
     const merchantId = Deno.env.get('TOYS4PEACE_MERCHANT_ID')
     const secretKey = Deno.env.get('TOYS4PEACE_SECRET_KEY')
 
@@ -105,7 +105,7 @@ serve(async (req) => {
     const gatewayOrderId = `NP-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
 
     // Create payment transaction record
-    const expiresAt = new Date(Date.now() + (180 * 1000)) // 180 seconds
+    const expiresAt = new Date(Date.now() + (180 * 1000)) // 3 minutes
 
     const { data: paymentTransaction, error: paymentError } = await supabaseClient
       .from('payment_transactions')
@@ -116,7 +116,6 @@ serve(async (req) => {
         gateway: 'toys4peace',
         gateway_order_id: gatewayOrderId,
         status: 'pending',
-        callback_url: callbackUrl,
         expires_at: expiresAt.toISOString(),
         payment_method: {
           type: 'upi',
@@ -127,21 +126,28 @@ serve(async (req) => {
       .single()
 
     if (paymentError || !paymentTransaction) {
+      console.error('Payment transaction creation failed:', paymentError)
       throw new Error('Failed to create payment transaction record')
     }
+
+    console.log('✅ Payment transaction created:', paymentTransaction)
 
     let gatewayTransactionId: string | undefined
     let upiString: string
 
     if (useGateway) {
+      console.log('Using real payment gateway...')
+
       const paymentRequest = {
         amountPaisa,
         orderId: gatewayOrderId,
-        callbackUrl: `${callbackUrl}?transaction_id=${paymentTransaction.id}`
+        callbackUrl: `https://ctdakdqpmntycertugvz.supabase.co/functions/v1/payment-webhook`
       }
 
       const authString = `${merchantId}:${secretKey}`
       const encodedAuth = btoa(authString)
+
+      console.log('Calling payment gateway API...')
 
       const gatewayResponse = await fetch(PAYMENT_API_URL, {
         method: 'PUT',
@@ -154,7 +160,9 @@ serve(async (req) => {
 
       if (!gatewayResponse.ok) {
         const errorData = await gatewayResponse.json()
+        console.error('Gateway API error:', errorData)
 
+        // Update transaction with gateway error
         await supabaseClient
           .from('payment_transactions')
           .update({
@@ -168,29 +176,38 @@ serve(async (req) => {
       }
 
       const gatewayData = await gatewayResponse.json()
+      console.log('Gateway response:', gatewayData)
+
       gatewayTransactionId = gatewayData.transactionId
       upiString = gatewayData.upiString
 
+      // Update transaction with gateway response
       const { error: updateError } = await supabaseClient
         .from('payment_transactions')
         .update({
           gateway_transaction_id: gatewayTransactionId,
           upi_string: upiString,
           gateway_status: 'CREATED',
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          gateway_response: gatewayData
         })
         .eq('id', paymentTransaction.id)
 
       if (updateError) {
         console.error('Failed to update payment transaction:', updateError)
       }
+
+      console.log('✅ Real gateway payment created')
     } else {
+      console.log('Using fallback UPI payment...')
+
       const amountRupees = amountPaisa / 100
-      const payee = merchantConfig?.config?.upi_id ?? 'test@upi'
-      const payeeName = encodeURIComponent(merchantConfig?.config?.merchant_name ?? 'NP Wellness')
+      const payee = merchantConfig?.config?.upi_id || 'test@upi'
+      const payeeName = encodeURIComponent(merchantConfig?.config?.merchant_name || 'NP Wellness')
       const note = encodeURIComponent(`Order ${gatewayOrderId}`)
       upiString = `upi://pay?pa=${payee}&pn=${payeeName}&am=${amountRupees.toFixed(2)}&cu=INR&tn=${note}`
 
+      // Update transaction with fallback
       const { error: fallbackUpdateError } = await supabaseClient
         .from('payment_transactions')
         .update({
@@ -204,6 +221,8 @@ serve(async (req) => {
       if (fallbackUpdateError) {
         console.error('Failed to update payment transaction during fallback:', fallbackUpdateError)
       }
+
+      console.log('✅ Fallback UPI payment created')
     }
 
     // Update order with payment transaction ID
@@ -216,20 +235,24 @@ serve(async (req) => {
       })
       .eq('id', orderId)
 
+    const response = {
+      success: true,
+      data: {
+        paymentId: paymentTransaction.id,
+        transactionId: gatewayTransactionId ?? paymentTransaction.id,
+        gatewayOrderId,
+        upiString,
+        amount: amountPaisa / 100,
+        currency: 'INR',
+        expiresAt: expiresAt.toISOString(),
+        status: 'pending'
+      }
+    }
+
+    console.log('✅ Real payment created successfully:', response)
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        data: {
-          paymentId: paymentTransaction.id,
-          transactionId: gatewayTransactionId ?? paymentTransaction.id,
-          gatewayOrderId,
-          upiString,
-          amount: amountPaisa / 100,
-          currency: 'INR',
-          expiresAt: expiresAt.toISOString(),
-          status: 'pending'
-        }
-      }),
+      JSON.stringify(response),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200
@@ -237,13 +260,22 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Payment creation error:', error)
+    console.error('❌ Payment creation error:', error)
+    console.error('Error stack:', error.stack)
+
+    const errorResponse = {
+      success: false,
+      error: error.message || 'Failed to create payment',
+      details: {
+        type: error.name,
+        stack: error.stack?.substring(0, 300)
+      }
+    }
+
+    console.log('❌ Error response:', errorResponse)
 
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message || 'Failed to create payment'
-      }),
+      JSON.stringify(errorResponse),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400
@@ -251,14 +283,3 @@ serve(async (req) => {
     )
   }
 })
-
-// Helper function to validate webhook signature (if needed)
-async function validateWebhookSignature(payload: string, signature: string, secret: string): Promise<boolean> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(payload + secret)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-
-  return signature === hashHex
-}

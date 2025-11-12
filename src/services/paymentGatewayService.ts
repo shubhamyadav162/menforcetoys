@@ -92,7 +92,7 @@ export class PaymentGatewayService {
       PaymentDebugger.logPaymentFlow('Calling create-payment edge function', { requestBody, headers: functionHeaders });
 
       const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: requestBody,
+        body: JSON.stringify(requestBody),
         headers: functionHeaders
       });
 
@@ -100,15 +100,26 @@ export class PaymentGatewayService {
 
       if (error) {
         PaymentDebugger.logError('create-payment edge function', error);
-        throw new Error(error.message || 'Failed to create payment');
+
+        // Extract detailed error information if available
+        let errorMessage = error.message || 'Failed to create payment';
+        if (error.details) {
+          console.error('Detailed error information:', error.details);
+          errorMessage += ` (${error.details.type || 'Unknown'})`;
+        }
+
+        throw new Error(errorMessage);
       }
 
       PaymentDebugger.logPaymentFlow('create-payment successful', data);
       return data;
     } catch (error) {
+      PaymentDebugger.logError('createPayment service error', error);
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
+        details: error
       };
     }
   }
