@@ -69,9 +69,9 @@ export class PaymentGatewayService {
       // Convert rupees to paisa
       const amountPaisa = Math.round(request.amount * 100);
 
-      // Set callback URL (you can customize this)
+      // Set frontend redirect URL (where user returns after payment)
       const callbackUrl = request.callbackUrl ||
-        `${window.location.origin}/api/payment/webhook`;
+        `${window.location.origin}/order-success`;
 
       const authHeaders = session
         ? { Authorization: `Bearer ${session.access_token}` }
@@ -86,7 +86,7 @@ export class PaymentGatewayService {
       const requestBody = {
         orderId: request.orderId,
         amountPaisa,
-        callbackUrl
+        frontendRedirectUrl: callbackUrl
       };
 
       PaymentDebugger.logPaymentFlow('Calling create-payment edge function', { requestBody, headers: functionHeaders });
