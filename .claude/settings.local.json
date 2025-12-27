@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node:*)",
+      "Bash(npm:*)",
+      "Bash(timeout:*)",
+      "Bash(claude mcp add:*)",
+      "Bash(echo:*)",
+      "Bash(export SUPABASE_ACCESS_TOKEN=sbp_f7cd120c88555bbd0d540c4730d1668db82de2cd:*)",
+      "Bash(export:*)",
+      "Bash(curl:*)",
+      "Bash(npx tsx:*)",
+      "Bash(claude /mcp)",
+      "Bash(mcp call supabase query:*)",
+      "Bash(npx supabase db push:*)",
+      "Bash(npx supabase login:*)",
+      "Bash(psql:*)",
+      "Bash(taskkill:*)",
+      "Bash(claude mcp list:*)",
+      "Bash(claude mcp --help:*)",
+      "Bash(claude mcp get:*)",
+      "Bash(claude mcp remove:*)",
+      "Bash(npx @supabase/mcp-server:*)",
+      "Bash(npx @supabase/mcp-server-supabase)",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(mcp call supabase:*)",
+      "Bash(npx @supabase/supabase-js functions list:*)",
+      "Bash(npx supabase functions deploy:*)",
+      "Bash(npx supabase secrets set:*)",
+      "Bash(npx supabase functions logs create-payment:*)",
+      "Bash(npx supabase functions list:*)",
+      "Bash(npx supabase secrets list:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
