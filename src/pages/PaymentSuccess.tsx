@@ -64,79 +64,97 @@ const PaymentSuccess: React.FC = () => {
     useEffect(() => {
         const checkPaymentAndSaveOrder = async () => {
             try {
-                // Get transaction ID from URL params
+                // Get params from URL
                 const txnId = searchParams.get('txn') || searchParams.get('transactionId');
                 const orderNumber = searchParams.get('order') || searchParams.get('billId');
+                const urlStatus = searchParams.get('status')?.toLowerCase();
 
-                console.log('🔍 Payment success page - params:', { txnId, orderNumber });
+                console.log('🔍 Payment success page - params:', { txnId, orderNumber, urlStatus });
                 setTransactionId(txnId);
 
+                // If no transaction ID, show failed
                 if (!txnId) {
-                    setPaymentStatus('unknown');
+                    setPaymentStatus('failed');
                     setIsLoading(false);
                     return;
                 }
 
-                // Check payment status from AcceptPay
-                const statusResponse = await AcceptPayService.getTransactionStatus(txnId);
-                console.log('📥 AcceptPay status:', statusResponse);
+                // Check URL status first - AcceptPay sends status in URL
+                if (urlStatus === 'failed' || urlStatus === 'failure' || urlStatus === 'cancelled') {
+                    console.log('❌ Payment failed (from URL status)');
+                    setPaymentStatus('failed');
+                    setIsLoading(false);
+                    return;
+                }
 
-                if (statusResponse.status === 'success' && statusResponse.data) {
-                    const paymentResult = statusResponse.data.status?.toLowerCase();
+                // If URL says success/completed, trust it
+                if (urlStatus === 'success' || urlStatus === 'completed') {
+                    console.log('✅ Payment success (from URL status)');
+                    setPaymentStatus('success');
 
-                    if (paymentResult === 'completed' || paymentResult === 'success') {
-                        setPaymentStatus('success');
+                    // Get pending order from localStorage
+                    const pendingOrders = JSON.parse(localStorage.getItem('np_pending_orders') || '[]');
+                    const pendingOrder = pendingOrders.find((o: any) =>
+                        o.transactionId === txnId || o.id === orderNumber
+                    );
 
-                        // Get pending order from localStorage
-                        const pendingOrders = JSON.parse(localStorage.getItem('np_pending_orders') || '[]');
-                        const pendingOrder = pendingOrders.find((o: any) =>
-                            o.transactionId === txnId || o.id === orderNumber
-                        );
+                    if (pendingOrder) {
+                        setOrderData(pendingOrder);
+                        // Update in Supabase
+                        OrderService.updateOrderPaymentStatus(pendingOrder.id, txnId, 'paid');
+                        // Clear from localStorage
+                        const filtered = pendingOrders.filter((o: any) => o.id !== pendingOrder.id);
+                        localStorage.setItem('np_pending_orders', JSON.stringify(filtered));
+                    }
 
-                        if (pendingOrder) {
-                            setOrderData(pendingOrder);
+                    setIsLoading(false);
+                    return;
+                }
 
-                            // Update order status in Supabase (order already created with 'pending' status)
-                            console.log('🔄 Updating order payment status in Supabase...');
-                            const updateResult = await OrderService.updateOrderPaymentStatus(
-                                pendingOrder.id,
-                                txnId,
-                                'paid'
+                // If no URL status, call API with timeout
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+                    const statusResponse = await AcceptPayService.getTransactionStatus(txnId);
+                    clearTimeout(timeoutId);
+
+                    console.log('📥 AcceptPay status:', statusResponse);
+
+                    if (statusResponse.status === 'success' && statusResponse.data) {
+                        const paymentResult = statusResponse.data.status?.toLowerCase();
+
+                        if (paymentResult === 'completed' || paymentResult === 'success') {
+                            setPaymentStatus('success');
+
+                            const pendingOrders = JSON.parse(localStorage.getItem('np_pending_orders') || '[]');
+                            const pendingOrder = pendingOrders.find((o: any) =>
+                                o.transactionId === txnId || o.id === orderNumber
                             );
 
-                            if (updateResult.success) {
-                                console.log('✅ Order updated to PAID in Supabase!');
-                                // Clear from localStorage
+                            if (pendingOrder) {
+                                setOrderData(pendingOrder);
+                                OrderService.updateOrderPaymentStatus(pendingOrder.id, txnId, 'paid');
                                 const filtered = pendingOrders.filter((o: any) => o.id !== pendingOrder.id);
                                 localStorage.setItem('np_pending_orders', JSON.stringify(filtered));
-                            } else {
-                                console.error('⚠️ Failed to update order:', updateResult.error);
                             }
+                        } else if (paymentResult === 'failed' || paymentResult === 'cancelled') {
+                            setPaymentStatus('failed');
                         } else {
-                            console.log('⚠️ Pending order not found in localStorage, trying to update by order number...');
-                            // Try to update by order number if we have it
-                            if (orderNumber) {
-                                const updateResult = await OrderService.updateOrderPaymentStatus(
-                                    orderNumber,
-                                    txnId,
-                                    'paid'
-                                );
-                                if (updateResult.success) {
-                                    console.log('✅ Order updated by order number!');
-                                }
-                            }
+                            // Still pending - show pending UI
+                            setPaymentStatus('pending');
                         }
-                    } else if (paymentResult === 'pending' || paymentResult === 'initiated') {
-                        setPaymentStatus('pending');
                     } else {
                         setPaymentStatus('failed');
                     }
-                } else {
-                    setPaymentStatus('unknown');
+                } catch (apiError) {
+                    console.error('API timeout or error:', apiError);
+                    // On API error, show failed status instead of hanging
+                    setPaymentStatus('failed');
                 }
             } catch (error) {
                 console.error('Error checking payment:', error);
-                setPaymentStatus('unknown');
+                setPaymentStatus('failed');
             } finally {
                 setIsLoading(false);
             }
